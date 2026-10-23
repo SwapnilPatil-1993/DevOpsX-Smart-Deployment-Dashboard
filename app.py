@@ -4,12 +4,16 @@ import os
 from datetime import datetime
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DB_PATH = os.path.join(BASE_DIR, "devopsx.db")
+DB_PATH = os.path.abspath(os.environ.get("DEVOPSX_DB_PATH", os.path.join(BASE_DIR, "devopsx.db")))
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("DEVOPSX_SECRET", "change-this-in-production")
+# Fail fast on Render if production secret configuration is missing.
+if os.environ.get("RENDER") and not os.environ.get("DEVOPSX_SECRET"):
+    raise RuntimeError("Missing DEVOPSX_SECRET: set it in the Render service environment.")
+app.secret_key = os.environ.get("DEVOPSX_SECRET", "local-development-only-change-me")
 
 def get_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
