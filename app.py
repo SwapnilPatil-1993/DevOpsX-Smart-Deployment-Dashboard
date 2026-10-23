@@ -39,6 +39,9 @@ def init_db():
                 [(p, r, e, s, n, datetime.now().strftime("%Y-%m-%d %H:%M")) for p, r, e, s, n in demo]
             )
 
+# Initialize the database when the app starts under Gunicorn/production hosting.
+init_db()
+
 @app.route("/")
 def dashboard():
     with get_db() as conn:
