@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import sqlite3
 import os
+import secrets
 from datetime import datetime
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -92,6 +93,54 @@ def delete_deployment(deployment_id):
         conn.execute("DELETE FROM deployments WHERE id = ?", (deployment_id,))
     flash("Deployment record deleted.", "success")
     return redirect(url_for("dashboard"))
+
+@app.route("/api/ci-status", methods=["POST"])
+def ci_status():
+    expected_token = os.environ.get("DEVOPSX_MONITOR_TOKEN", "")
+    supplied_token = request.headers.get("Authorization", "")
+    if not expected_token:
+        return jsonify({"error": "CI status reporting is not configured"}), 503
+    if not secrets.compare_digest(supplied_token, f"Bearer {expected_token}"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    status = payload.get("status")
+    if status not in {"Success", "Failed"}:
+        return jsonify({"error": "status must be Success or Failed"}), 400
+
+    run_url = str(payload.get("run_url", ""))[:500]
+    commit_sha = str(payload.get("commit_sha", ""))[:100]
+    notes = f"GitHub Actions CI: {status}"
+    if commit_sha:
+        notes += f" | commit: {commit_sha}"
+    if run_url:
+        notes += f" | run: {run_url}"
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT id FROM deployments WHERE project_name = ?",
+            ("DevOpsX CI",)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                """UPDATE deployments
+                   SET repository_url = ?, environment = ?, status = ?, notes = ?, created_at = ?
+                   WHERE id = ?""",
+                ("https://github.com/SwapnilPatil-1993/DevOpsX-Smart-Deployment-Dashboard",
+                 "Development", status, notes, now, existing["id"])
+            )
+        else:
+            conn.execute(
+                """INSERT INTO deployments
+                   (project_name, repository_url, environment, status, notes, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("DevOpsX CI",
+                 "https://github.com/SwapnilPatil-1993/DevOpsX-Smart-Deployment-Dashboard",
+                 "Development", status, notes, now)
+            )
+    return jsonify({"status": "recorded", "ci_status": status}), 200
+
 
 @app.route("/health")
 def health():
