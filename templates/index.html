@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevOpsX | Deployment Control Center</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">D</span><div><b>DevOpsX</b><small>CONTROL CENTER</small></div></div>
+    <nav><a class="active" href="/">▦ &nbsp; Overview</a><a href="#deployments">⇧ &nbsp; Deployments</a><a href="#new-deployment">＋ &nbsp; New deployment</a></nav>
+    <div class="sidebar-note"><span class="pulse"></span> Demo environment<br><small>Local dashboard mode</small></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar"><div><p class="eyebrow">WORKSPACE / OVERVIEW</p><h1>Deployment Control Center</h1><p class="muted">A clear view of your software release activity.</p></div><div class="avatar">SP</div></header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="messages">{% for category, message in messages %}<p class="flash {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    <section class="stats">
+      <article class="stat"><div class="stat-top">Total deployments <span>↗</span></div><strong>{{ total }}</strong><small>All recorded releases</small></article>
+      <article class="stat"><div class="stat-top">Successful <span class="green">●</span></div><strong>{{ success }}</strong><small>Marked as successful</small></article>
+      <article class="stat"><div class="stat-top">Failed <span class="red">●</span></div><strong>{{ failed }}</strong><small>Needs investigation</small></article>
+      <article class="stat"><div class="stat-top">In progress <span class="blue">●</span></div><strong>{{ running }}</strong><small>Currently marked running</small></article>
+    </section>
+
+    <section class="panel" id="deployments">
+      <div class="panel-heading"><div><h2>Recent deployments</h2><p class="muted">Track project releases and their current status.</p></div><a class="text-link" href="#new-deployment">+ Add record</a></div>
+      <div class="table-wrap"><table><thead><tr><th>PROJECT</th><th>ENVIRONMENT</th><th>STATUS</th><th>UPDATED</th><th></th></tr></thead>
+      <tbody>{% for d in deployments %}
+        <tr><td><b>{{ d['project_name'] }}</b><small class="repo">{{ d['repository_url'] }}</small>{% if d['notes'] %}<small class="notes">{{ d['notes'] }}</small>{% endif %}</td>
+        <td>{{ d['environment'] }}</td><td><span class="badge {{ d['status']|lower }}">{{ d['status'] }}</span></td><td>{{ d['created_at'] }}</td>
+        <td><form method="post" action="{{ url_for('delete_deployment', deployment_id=d['id']) }}" onsubmit="return confirm('Delete this demo record?')"><button class="icon-button" title="Delete record">×</button></form></td></tr>
+      {% else %}<tr><td colspan="5" class="empty">No deployment records yet.</td></tr>{% endfor %}</tbody></table></div>
+    </section>
+
+    <section class="panel form-panel" id="new-deployment">
+      <div class="panel-heading"><div><h2>Add deployment record</h2><p class="muted">MVP: record a deployment status manually.</p></div></div>
+      <form class="deployment-form" method="post" action="{{ url_for('add_deployment') }}">
+        <label>Project name<input name="project_name" placeholder="e.g. Student Portal" required></label>
+        <label>Repository URL<input name="repository_url" type="url" placeholder="https://github.com/username/repository" required></label>
+        <label>Environment<select name="environment"><option>Development</option><option>Staging</option><option>Production</option></select></label>
+        <label>Status<select name="status"><option>Queued</option><option>Running</option><option>Success</option><option>Failed</option></select></label>
+        <label class="wide">Notes<input name="notes" placeholder="Build details, error summary, or release notes"></label>
+        <div class="wide"><button class="primary" type="submit">Save deployment record</button></div>
+      </form>
+    </section>
+    <footer>DevOpsX Minor Project · Prototype dashboard · GitHub/CI integration is a planned next phase</footer>
+  </main>
+</body>
+</html>
