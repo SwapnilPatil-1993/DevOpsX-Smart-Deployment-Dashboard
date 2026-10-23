@@ -43,3 +43,7 @@ This first version is a dashboard prototype. Deployment statuses are entered man
 
 ## Academic use
 Explain which parts are implemented and which are planned. Do not claim automated deployment or live GitHub monitoring until that integration is added and tested.
+
+
+## Automated checks
+GitHub Actions runs the Python unit test suite on pushes and pull requests targeting `main`. Open the repository Actions tab to review the latest run and any failure logs.
