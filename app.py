@@ -3,6 +3,7 @@ import os
 import secrets
 import sqlite3
 from datetime import datetime
+from contextlib import contextmanager
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DB_PATH = os.path.abspath(os.environ.get("DEVOPSX_DB_PATH", os.path.join(BASE_DIR, "devopsx.db")))
@@ -30,6 +31,16 @@ def get_db():
     return conn
 
 
+@contextmanager
+def db_connection():
+    conn = get_db()
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
+
+
 def execute(conn, sql, params=()):
     """Run parameterized SQL with the placeholder style for the selected database."""
     if USE_POSTGRES:
@@ -38,7 +49,7 @@ def execute(conn, sql, params=()):
 
 
 def init_db():
-    with get_db() as conn:
+    with db_connection() as conn:
         if USE_POSTGRES:
             execute(conn, """
                 CREATE TABLE IF NOT EXISTS deployments (
@@ -85,7 +96,7 @@ init_db()
 
 @app.route("/")
 def dashboard():
-    with get_db() as conn:
+    with db_connection() as conn:
         deployments = execute(conn, "SELECT * FROM deployments ORDER BY id DESC").fetchall()
         total = execute(conn, "SELECT COUNT(*) AS count FROM deployments").fetchone()["count"]
         success = execute(conn, "SELECT COUNT(*) AS count FROM deployments WHERE status='Success'").fetchone()["count"]
@@ -113,7 +124,7 @@ def add_deployment():
         flash("Please select a valid environment and status.", "error")
         return redirect(url_for("dashboard"))
 
-    with get_db() as conn:
+    with db_connection() as conn:
         execute(conn,
             """INSERT INTO deployments
             (project_name, repository_url, environment, status, notes, created_at)
@@ -127,7 +138,7 @@ def add_deployment():
 
 @app.route("/deployments/<int:deployment_id>/delete", methods=["POST"])
 def delete_deployment(deployment_id):
-    with get_db() as conn:
+    with db_connection() as conn:
         execute(conn, "DELETE FROM deployments WHERE id = ?", (deployment_id,))
     flash("Deployment record deleted.", "success")
     return redirect(url_for("dashboard"))
@@ -157,7 +168,7 @@ def ci_status():
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     repo_url = "https://github.com/SwapnilPatil-1993/DevOpsX-Smart-Deployment-Dashboard"
 
-    with get_db() as conn:
+    with db_connection() as conn:
         existing = execute(conn, "SELECT id FROM deployments WHERE project_name = ?", ("DevOpsX CI",)).fetchone()
         if existing:
             execute(conn,
