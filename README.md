@@ -5,7 +5,8 @@ DevOpsX is a student minor-project prototype for tracking deployment records and
 ## Implemented features
 - Dashboard metrics for total, successful, failed, and running deployment records.
 - Add and delete deployment records with repository URL, environment, status, and notes.
-- SQLite database initialized automatically at application startup.
+- SQLite database initialized automatically at application startup for local development.
+- Optional PostgreSQL backend using the `DATABASE_URL` environment variable, with `psycopg` support for persistent hosting.
 - Responsive dashboard UI and a health endpoint at `/health`.
 - Five automated Flask application tests in `tests/test_app.py`.
 - GitHub Actions workflow at `.github/workflows/ci.yml` runs the tests on pushes and pull requests targeting `main`.
@@ -38,6 +39,15 @@ DevOpsX is a student minor-project prototype for tracking deployment records and
 
 The app creates `devopsx.db` and inserts sample records when the database is empty. The sample records are demonstration data, not real deployments.
 
+## PostgreSQL setup (optional)
+1. Open the `devopsx-free-postgres` database in the Render Dashboard.
+2. Copy its **Internal Database URL** (keep it private).
+3. Open the `devopsx-smart-deployment-dashboard` web service, then **Environment**.
+4. Add `DATABASE_URL` with the copied Internal Database URL and save. Both resources are in Singapore, so use the internal URL.
+5. Wait for Render to redeploy, then open `/health`; it should return `\"database\": \"postgresql\"` when the app is connected.
+
+Do not paste the database URL into GitHub or commit it to the repository. The current SQLite records are not automatically migrated to PostgreSQL; the app initializes sample data in the new database.
+
 ## CI status integration setup
 1. In Render, configure `DEVOPSX_SECRET` with a strong random value and `DEVOPSX_MONITOR_TOKEN` with a separate strong random token.
 2. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**.
@@ -48,7 +58,8 @@ The app creates `devopsx.db` and inserts sample records when the database is emp
 ## Important limitations
 - Most deployment records are still entered manually. The project does not trigger real deployments to external providers.
 - CI result reporting is implemented in code, but its end-to-end operation depends on the GitHub repository secret being configured and the workflow passing.
-- The app currently uses SQLite. On Render's ephemeral filesystem, data may be lost during a restart or redeploy unless a persistent disk/database is configured. Do not rely on the hosted SQLite file for durable storage.
+- Without `DATABASE_URL`, the hosted app still uses SQLite on Render's ephemeral filesystem, so records may be lost during a restart or redeploy.
+- A free Render PostgreSQL instance has been created for evaluation, but Render marks it to expire on **November 23, 2026**. The app will not use it until its Internal Database URL is configured as `DATABASE_URL` on the web service. The free database is temporary, not permanent storage.
 - The dashboard is a learning prototype and does not yet include user authentication or role-based access control.
 
 ## Automated tests
