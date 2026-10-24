@@ -71,11 +71,7 @@ def init_db():
                 ("Library API", "https://github.com/example/library-api", "Production", "Failed", "Demo: missing environment variable"),
                 ("Student Dashboard", "https://github.com/example/student-dashboard", "Development", "Running", "Demo deployment in progress"),
             ]
-            execute(conn,
-                "INSERT INTO deployments (project_name, repository_url, environment, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                # Each row is inserted separately so the same code works with SQLite and PostgreSQL.
-                ()
-            ) if False else None
+            # Insert rows separately so SQLite and PostgreSQL share the same code path.
             for project_name, repository_url, environment, status, notes in demo:
                 execute(conn,
                     "INSERT INTO deployments (project_name, repository_url, environment, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
