@@ -27,7 +27,7 @@ class DevOpsXAppTests(unittest.TestCase):
     def test_health_endpoint_returns_ok(self):
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"status": "ok", "service": "DevOpsX"})
+        self.assertEqual(response.get_json(), {"status": "ok", "service": "DevOpsX", "database": "sqlite"})
 
     def test_add_deployment_record(self):
         response = self.client.post("/deployments/new", data={
