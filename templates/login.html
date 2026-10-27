@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevOpsX | Sign in</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-body">
+  <main class="login-card">
+    <div class="login-brand"><span class="brand-mark">D</span><div><b>DevOpsX</b><small>CONTROL CENTER</small></div></div>
+    <p class="eyebrow">SECURE WORKSPACE</p>
+    <h1>Welcome back</h1>
+    <p class="muted login-intro">Sign in to access your deployment dashboard.</p>
+    {% if error %}<p class="flash error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ url_for('login', next=request.args.get('next', '/')) }}" class="login-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Username<input name="username" autocomplete="username" required autofocus></label>
+      <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit">Sign in</button>
+    </form>
+    <p class="login-foot">DevOpsX Minor Project · Authorized access only</p>
+  </main>
+</body>
+</html>
