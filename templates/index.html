@@ -14,7 +14,7 @@
   </aside>
 
   <main class="main">
-    <header class="topbar"><div><p class="eyebrow">WORKSPACE / OVERVIEW</p><h1>Deployment Control Center</h1><p class="muted">A clear view of your software release activity.</p></div><div class="avatar">SP</div></header>
+    <header class="topbar"><div><p class="eyebrow">WORKSPACE / OVERVIEW</p><h1>Deployment Control Center</h1><p class="muted">A clear view of your software release activity.</p></div><div class="header-actions"><form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="logout-button" type="submit">Log out</button></form><div class="avatar">SP</div></div></header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}<div class="messages">{% for category, message in messages %}<p class="flash {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
@@ -33,13 +33,13 @@
       <tbody>{% for d in deployments %}
         <tr><td><b>{{ d['project_name'] }}</b><small class="repo">{{ d['repository_url'] }}</small>{% if d['notes'] %}<small class="notes">{{ d['notes'] }}</small>{% endif %}</td>
         <td>{{ d['environment'] }}</td><td><span class="badge {{ d['status']|lower }}">{{ d['status'] }}</span></td><td>{{ d['created_at'] }}</td>
-        <td><form method="post" action="{{ url_for('delete_deployment', deployment_id=d['id']) }}" onsubmit="return confirm('Delete this demo record?')"><button class="icon-button" title="Delete record">×</button></form></td></tr>
+        <td><form method="post" action="{{ url_for('delete_deployment', deployment_id=d['id']) }}" onsubmit="return confirm('Delete this deployment record?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="icon-button" title="Delete record">×</button></form></td></tr>
       {% else %}<tr><td colspan="5" class="empty">No deployment records yet.</td></tr>{% endfor %}</tbody></table></div>
     </section>
 
     <section class="panel form-panel" id="new-deployment">
       <div class="panel-heading"><div><h2>Add deployment record</h2><p class="muted">MVP: record a deployment status manually.</p></div></div>
-      <form class="deployment-form" method="post" action="{{ url_for('add_deployment') }}">
+      <form class="deployment-form" method="post" action="{{ url_for('add_deployment') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Project name<input name="project_name" placeholder="e.g. Student Portal" required></label>
         <label>Repository URL<input name="repository_url" type="url" placeholder="https://github.com/username/repository" required></label>
         <label>Environment<select name="environment"><option>Development</option><option>Staging</option><option>Production</option></select></label>

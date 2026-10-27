@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from functools import wraps
 import os
 import secrets
 import sqlite3
@@ -14,6 +15,46 @@ app = Flask(__name__)
 if os.environ.get("RENDER") and not os.environ.get("DEVOPSX_SECRET"):
     raise RuntimeError("Missing DEVOPSX_SECRET: set it in the Render service environment.")
 app.secret_key = os.environ.get("DEVOPSX_SECRET", "local-development-only-change-me")
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=bool(os.environ.get("RENDER")),
+)
+ADMIN_USERNAME = os.environ.get("DEVOPSX_ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("DEVOPSX_ADMIN_PASSWORD", "" if os.environ.get("RENDER") else "admin123")
+
+
+def get_csrf_token():
+    token = session.get("_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": get_csrf_token}
+
+
+def csrf_protected(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        supplied = request.form.get("csrf_token", "")
+        expected = session.get("_csrf_token", "")
+        if not expected or not supplied or not secrets.compare_digest(supplied, expected):
+            return "Invalid or missing CSRF token. Refresh the page and try again.", 400
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("authenticated"):
+            return redirect(url_for("login", next=request.path))
+        return view(*args, **kwargs)
+    return wrapped
 
 
 def get_db():
@@ -94,7 +135,42 @@ def init_db():
 init_db()
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        supplied_csrf = request.form.get("csrf_token", "")
+        expected_csrf = session.get("_csrf_token", "")
+        if not expected_csrf or not supplied_csrf or not secrets.compare_digest(supplied_csrf, expected_csrf):
+            error = "Your session token expired. Refresh the page and try again."
+        elif not ADMIN_PASSWORD:
+            error = "Admin login is not configured. Set DEVOPSX_ADMIN_USERNAME and DEVOPSX_ADMIN_PASSWORD in the service environment."
+        else:
+            username = request.form.get("username", "")
+            password = request.form.get("password", "")
+            if secrets.compare_digest(username, ADMIN_USERNAME) and secrets.compare_digest(password, ADMIN_PASSWORD):
+                destination = request.args.get("next", "")
+                session.clear()
+                session["authenticated"] = True
+                session["_csrf_token"] = secrets.token_urlsafe(32)
+                if not destination.startswith("/") or destination.startswith("//"):
+                    destination = url_for("dashboard")
+                return redirect(destination)
+            error = "Invalid username or password."
+    return render_template("login.html", error=error), (503 if request.method == "POST" and not ADMIN_PASSWORD else 200)
+
+
+@app.route("/logout", methods=["POST"])
+@login_required
+@csrf_protected
+def logout():
+    session.clear()
+    flash("You have been logged out.", "success")
+    return redirect(url_for("login"))
+
+
 @app.route("/")
+@login_required
 def dashboard():
     with db_connection() as conn:
         deployments = execute(conn, "SELECT * FROM deployments ORDER BY id DESC").fetchall()
@@ -107,6 +183,8 @@ def dashboard():
 
 
 @app.route("/deployments/new", methods=["POST"])
+@login_required
+@csrf_protected
 def add_deployment():
     project_name = request.form.get("project_name", "").strip()
     repository_url = request.form.get("repository_url", "").strip()
@@ -137,6 +215,8 @@ def add_deployment():
 
 
 @app.route("/deployments/<int:deployment_id>/delete", methods=["POST"])
+@login_required
+@csrf_protected
 def delete_deployment(deployment_id):
     with db_connection() as conn:
         execute(conn, "DELETE FROM deployments WHERE id = ?", (deployment_id,))
