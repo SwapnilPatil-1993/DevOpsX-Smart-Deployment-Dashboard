@@ -189,7 +189,15 @@ def ci_status():
 
 @app.route("/health")
 def health():
-    return {"status": "ok", "service": "DevOpsX", "database": "postgresql" if USE_POSTGRES else "sqlite"}, 200
+    # Check the actual database connection, not just whether DATABASE_URL exists.
+    database_type = "postgresql" if USE_POSTGRES else "sqlite"
+    try:
+        with db_connection() as conn:
+            execute(conn, "SELECT 1").fetchone()
+        return {"status": "ok", "service": "DevOpsX", "database": database_type}, 200
+    except Exception:
+        app.logger.exception("Database health check failed")
+        return {"status": "error", "service": "DevOpsX", "database": database_type}, 503
 
 
 if __name__ == "__main__":
