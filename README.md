@@ -17,7 +17,7 @@ DevOpsX is a student minor-project prototype for tracking deployment records and
 - Live dashboard: https://devopsx-smart-deployment-dashboard.onrender.com
 - GitHub repository: https://github.com/SwapnilPatil-1993/DevOpsX-Smart-Deployment-Dashboard
 
-> Authentication changes in the feature branch are not live until the pull request is reviewed/merged and the Render environment variables below are configured.
+> The authentication and CSRF-protection code is present on `main`. Production login and CI status reporting still require the Render environment variables listed below; verify them in the Render service before presenting the live demo.
 
 ## Technology stack
 Python 3.10+, Flask, Gunicorn, SQLite/PostgreSQL, HTML/CSS, GitHub Actions, and Render.
