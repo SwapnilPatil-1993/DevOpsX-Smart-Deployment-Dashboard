@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import app as devopsx
 
@@ -28,6 +29,14 @@ class DevOpsXAppTests(unittest.TestCase):
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json(), {"status": "ok", "service": "DevOpsX", "database": "sqlite"})
+
+    def test_health_endpoint_reports_database_failure(self):
+        with patch.object(devopsx, "db_connection", side_effect=RuntimeError("database unavailable")):
+            response = self.client.get("/health")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.get_json(), {
+            "status": "error", "service": "DevOpsX", "database": "sqlite"
+        })
 
     def test_add_deployment_record(self):
         response = self.client.post("/deployments/new", data={
